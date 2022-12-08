@@ -1,0 +1,118 @@
+import com.nolimitscoaster.*;
+
+public class TrackLightManager extends Script {	
+	
+    // Static 
+    private static final int SETUP_DELAY_THRESHOLD = 15;
+	private static final int MAX_TRACK_LIGHTS = 2096;
+	private static TrackLightManager[] trackLightManagers;
+	private static int trackLightManagerCount = 0;
+
+    public static bool registerTrackLight(TrackLight trackLight, Coaster coaster) {
+
+        TrackLightManager tlm = getByCoaster(coaster);
+        if (tlm == null) {
+            //System.err.println("ERROR: no track light manager found with the coaster \"" + coaster.getName() + "\"");
+            return false;
+        }
+        return tlm.register(trackLight);
+
+    }
+
+	private static void registerTrackLightManager(TrackLightManager tlm) {
+
+        if (trackLightManagers == null) trackLightManagers = new TrackLightManager[32];
+
+		trackLightManagers[trackLightManagerCount] = tlm;
+		trackLightManagerCount++;
+
+	}
+
+    private static TrackLightManager getByCoaster(Coaster coaster) {
+
+        for (int i = 0; i < trackLightManagerCount; i++) {
+            if (trackLightManagers[i].coaster.getName().equals(coaster.getName())) return trackLightManagers[i];
+        }
+        return null;
+
+    }
+
+    // Instance
+
+    private SceneObject sco;
+	private TrackPos trackPos;
+	private Coaster coaster;
+
+	private TrackLight[] trackLights;
+    public int trackLightCount;
+    private bool setupFinished = false;
+    private int setupDelay = 0;
+    private TrackLightSequence tls;
+
+    // Called at simulation start
+	public bool onInit(){
+	
+        registerTrackLightManager(this);
+    
+		// Get Scenery Object reference and populate local variables
+		sco = sim.getSceneObjectForEntityId(getParentEntityId());
+		coaster = sco.getCoasterParameter("coaster");
+        trackPos = coaster.findNearestTrack(sco.getTranslation(), 9999);
+		trackLights = new TrackLight[MAX_TRACK_LIGHTS];
+        trackLightCount = 0;
+
+        tls = new TrackLightSequence(this, Tools.loadTextFileFromResource(sco.getResourcePathParameter("sequence")));
+
+		return true;
+		
+	}
+
+    private bool register(TrackLight light) {
+
+        if (trackLightCount >= MAX_TRACK_LIGHTS) {
+            System.err.println("ERROR: too many lights! current limit per track is \"" + MAX_TRACK_LIGHTS + "\"");
+            return false;
+        }
+
+        trackLights[trackLightCount] = light;
+        trackLightCount++;
+
+        return true;
+
+    }
+
+	public void onNextFrame(float tick) {
+       
+        if(!setupFinished) {
+            setupDelay++;
+            if (setupDelay > SETUP_DELAY_THRESHOLD) {
+                setup();
+            }   
+        } 
+        else {
+
+            tls.update(tick);
+
+        }
+       
+	}
+
+    public TrackLight getTrackLightAt(int index) {
+        return trackLights[index];
+    }
+
+    private void setup() {
+
+        float totalOffset = 0;
+        for (int i = 0; i < trackLightCount; i++) {
+
+            trackLights[i].sco.setMatrix(trackPos.getTrackPosOnCenterRailsWithOffset(totalOffset).getCenterRailsMatrix());
+            totalOffset += trackLights[i].length;
+        }
+    
+        setupFinished = true;
+
+    }
+	
+	
+}

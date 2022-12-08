@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+  <sceneobject>
+    <model path="triple_light.dae"/>
+    <script>
+      <classpath></classpath>
+      <class>TrackLightManager</class>
+      <sharedvm>true</sharedvm>
+    </script>
+    <scriptparameter>
+      <type>coaster</type>
+      <id>coaster</id>
+      <label>Coaster</label>
+    </scriptparameter>
+    <scriptparameter>
+      <type filetype="text">resourcepath</type>
+      <defaultvalue>test.txt</defaultvalue>
+      <id>sequence</id>
+      <label>Light Sequence File (.lsq)</label>
+    </scriptparameter>
+  </sceneobject>
+</root>

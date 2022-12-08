@@ -1,0 +1,43 @@
+import com.nolimitscoaster.*;
+import nlvm.math3d.*;
+
+public class TrackLight extends Script {	
+	
+    private static final int MAX_LIGHT_COUNT = 5;
+
+	public SceneObject sco;
+    public float length = 1;
+    private bool registered = false;
+
+	// Called at simulation start
+	public bool onInit(){
+	
+		// Get Scenery Object reference and populate local variables
+		sco = sim.getSceneObjectForEntityId(getParentEntityId());
+
+        // Register the track light with the track light manager
+		length = sco.getDoubleParameter("length").floatValue();
+
+		return true;
+		
+	}
+	
+    public void setLight(int index, Vector3f color) {
+
+        if (index > sco.getLightCount()) {
+            System.out.println("ERROR: light index out of range: \"" + index + "\", maximum: \"" + sco.getLightCount() + " - 1\"");
+            return;
+        } 
+        sco.getLightAt(index).setColor(color);
+    }
+	
+    public void onNextFrame(float tick) {
+
+        if (!registered) {
+            TrackLightManager.registerTrackLight(this, sco.getCoasterParameter("coaster"));
+            registered = true;
+        }
+
+    }
+
+}

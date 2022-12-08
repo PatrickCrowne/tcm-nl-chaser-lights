@@ -1,0 +1,121 @@
+
+
+public class TrackLightSequence {	
+	
+    private static final int MAX_SUBROUTINES = 64;
+
+    public float delayTime = 0;
+    private TrackLightManager tlm;
+
+    // Memory
+    private String[] commands;
+
+    private String[] subroutineNameList;
+    private int[] subroutineIndexList;
+    private int subroutineCount;
+
+    // Current State
+    private int commandIndex = 0;
+    private TrackLightCommand currentCommand;
+
+    public TrackLightSequence(TrackLightManager trackLightManager, String c) {
+
+        tlm = trackLightManager;
+        commands = split(c, '\n');
+
+        subroutineNameList = new String[MAX_SUBROUTINES];
+        subroutineIndexList = new String[MAX_SUBROUTINES]
+
+    }
+
+    public String[] split(String s, char splitChar) {
+
+        int charCount = 0;
+        for (int i = 0; i < s.length(); i++) {
+            if (s.charAt(i) == splitChar) charCount++;
+        }
+
+        String[] result = new String[charCount + 1];
+
+        int index = 0;
+        String buffer = "";
+        for (int i = 0; i < s.length(); i++) {
+            if (s.charAt(i) == splitChar) {
+                result[index] = buffer;
+                index++;
+                buffer = "";
+            }
+            else {
+                buffer = buffer + s.charAt(i);
+            }
+        }
+        result[index] = buffer;
+
+        return result;
+
+    }
+
+    public void compile() {
+
+        for (int i = 0; i < commands.length; i++) {
+
+            String[] arguments = split(command[i], ' ');
+
+            if (arguments[0].equals("SUB")) {
+
+                if (!registerSubroutine(arguments[1], i)) {
+
+                }
+
+            }
+
+        }
+
+    }
+
+    public void update(float tick) {
+
+        if (delayTime > 0) {
+            delayTime -= tick;
+        }
+        else {
+
+            currentCommand = new TrackLightCommand(commands[commandIndex], tlm, this);
+            currentCommand.execute();
+            
+            commandIndex++;
+            if (commandIndex >= commands.length) {
+                commandIndex = 0;
+            }
+
+        }
+
+    }
+
+    private int getSubroutineIndex(String name) {
+
+        for (int i = 0; i < subroutineCount; i++) {
+            if (subroutineNameList[i].equals(name)) return subroutineIndexList[i];
+        }
+        return -1;
+        
+    }
+
+    private bool registerSubroutine(String name, int index) {
+
+        if (getSubroutineIndex(name) != -1) {
+            compileFailed("DUPILCATE SUBROUTINE NAME \"" + name + "\"");
+            return false;
+        }
+
+        subroutineIndexList[subroutineCount] = index;
+        subroutineNameList[subroutineCount] = name;
+        subroutineCount++;
+
+    }
+
+    private void compileFailed(String message) {
+        System.err.println("LIGHT COMPILATION ERROR. REASON: \"" + name + "\"");
+    }
+
+}
