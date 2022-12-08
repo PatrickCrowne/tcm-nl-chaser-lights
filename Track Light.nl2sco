@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <root>
   <sceneobject>
-    <model path="triple_light.dae"/>
+    <model path="Demo/triple_light.dae"/>
     <script>
-      <classpath></classpath>
+      <classpath>Scripts</classpath>
       <class>TrackLight</class>
       <sharedvm>true</sharedvm>
     </script>
@@ -19,7 +19,7 @@
       <description>the total track length of this light</description>
       <label>Length</label>
     </scriptparameter>
-    <materialpath name="mat">New.nl2mat</materialpath>
+    <materialpath name="mat">Demo/New.nl2mat</materialpath>
     <lightsource range="2" intensity="1" type="point" frommodel="true">
       <name>Point</name>
       <position x="0" y="-0.183459" z="0"/>

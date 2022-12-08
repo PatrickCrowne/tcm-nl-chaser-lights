@@ -2,19 +2,30 @@ import nlvm.math3d.*;
 
 public class TrackLightCommand {	
 	
-    // No Op Info
-    public bool noop = false;
+    public static final String OP_NOP = "NOP";
+    public static final String OP_SET = "SET";
+    public static final String OP_CLEAR = "CLEAR";
+    public static final String OP_DELAY = "DELAY";
+    public static final String OP_JUMP = "JUMP";
+    public static final String OP_RET = "RETURN";
+    public static final String OP_SUB = "DEF";
 
-    // Delay info
-    public bool isDelay;
-    public float delayTime;
+    public static final String KW_ALL = "ALL";
+    public static final String KW_MAX = "MAX";
+    public static final String KW_MAIN = "MAIN";
 
-    // Light info
+    
+    public String commandName;
+
     public int lightStart;
     public int lightEnd;
     public int lightStep;
+
     public Vector3f color;
 	
+    public float delayTime;
+    public int jumpLocation;
+
     private TrackLightManager tlm;
     private TrackLightSequence tls;
 
@@ -31,55 +42,35 @@ public class TrackLightCommand {
 
     private bool processCommandString(String commandString) {
 
+        System.out.println(commandString);
+
         String[] arguments = split(commandString, ' ');
 
+        commandName = arguments[0];
+
         // Parse empty lines and comments
-        if (arguments[0].length() == 0 || (arguments[0].length() > 0 && arguments[0].charAt(0) == '#')) {
-            noop = true;
+        if (commandName.equals(OP_NOP) || commandName.equals(OP_SUB) || commandName.length() == 0 || (commandName.length() > 0 && commandName.charAt(0) == '#')) {
+            commandName = OP_NOP;
         }
 
-        if (arguments[0].equals("CLEAR")) {
-            lightStart = 0;
-            lightEnd = processInt("MAX");
-            lightStep = 1;
+        // CLEAR A-B-C
+        if (commandName.equals(OP_CLEAR)) {
+            parseLightRange(arguments[1]);
             color = new Vector3f(0,0,0);
         }
 
-        if (arguments[0].equals("ALL")) {
-            lightStart = 0;
-            lightEnd = processInt("MAX");
-            lightStep = 1;
-
-            color = new Vector3f( ((float)(Integer.parseInt(arguments[1])) / 255.0f), ((float)(Integer.parseInt(arguments[2])) / 255.0f), ((float)(Integer.parseInt(arguments[3])) / 255.0f));
-
+        // SET A-B-C R G B
+        if (commandName.equals(OP_SET)) {
+            parseLightRange(arguments[1]);
+            parseColor(arguments[2], arguments[3], arguments[4]);
         }
 
-        if (arguments[0].equals("SET")) {
-
-            String[] lightRange = split(arguments[1], '-');
-
-            if (lightRange.length == 1) {
-                lightStart = processInt(lightRange[0]);
-                lightEnd = lightStart;
-                lightStep = 1;
-            }
-            else if (lightRange.length == 2){
-                lightStart = processInt(lightRange[0]);
-                lightEnd = processInt(lightRange[1]);
-                lightStep = 1;
-            }
-            else {
-                lightStart = processInt(lightRange[0]);
-                lightEnd = processInt(lightRange[1]);
-                lightStep = processInt(lightRange[2]);
-            }
-
-            color = new Vector3f( ((float)(Integer.parseInt(arguments[2])) / 255.0f), ((float)(Integer.parseInt(arguments[3])) / 255.0f), ((float)(Integer.parseInt(arguments[4])) / 255.0f));
-
+        if (commandName.equals(OP_JUMP)) {
+            parseSubroutine(arguments[1]);
         }
 
-        if (arguments[0].equals("DELAY")) {
-            isDelay = true;
+        // DELAY (MS)
+        if (commandName.equals(OP_DELAY)) {
             delayTime = (float) (Integer.parseInt(arguments[1])) / 1000.0f;
         }
 
@@ -87,8 +78,56 @@ public class TrackLightCommand {
 
     }
 
-    private int processInt(String string) {
-        if (string.equals("MAX")) {
+    private void parseSubroutine(String string) {
+
+        int index = tls.getSubroutineIndex(string);
+
+        if (index < 0) {
+            System.err.println("UNKNOWN SUBROUTINE \"" + string + "\"");
+            return;
+        }
+
+        jumpLocation = index;
+
+    }
+
+    private void parseLightRange(String string) {
+
+        if (string.equals(KW_ALL)) {
+            lightStart = 0;
+            lightEnd = parseInteger(KW_MAX);
+            lightStep = 1;
+            return;
+        }
+
+        String[] lightRange = split(string, '-');
+
+        if (lightRange.length == 1) {
+            lightStart = parseInteger(lightRange[0]);
+            lightEnd = lightStart;
+            lightStep = 1;
+        }
+        else if (lightRange.length == 2){
+            lightStart = parseInteger(lightRange[0]);
+            lightEnd = parseInteger(lightRange[1]);
+            lightStep = 1;
+        }
+        else {
+            lightStart = parseInteger(lightRange[0]);
+            lightEnd = parseInteger(lightRange[1]);
+            lightStep = parseInteger(lightRange[2]);
+        }
+
+    }
+
+    private void parseColor(String arg0, String arg1, String arg2) {
+
+        color = new Vector3f( ((float)(Integer.parseInt(arg0)) / 255.0f), ((float)(Integer.parseInt(arg1)) / 255.0f), ((float)(Integer.parseInt(arg2)) / 255.0f));
+
+    }
+
+    private int parseInteger(String string) {
+        if (string.equals(KW_MAX)) {
             return tlm.trackLightCount;
         }
         return Integer.parseInt(string);
@@ -123,11 +162,23 @@ public class TrackLightCommand {
 
     public void execute() {
 
-        if (noop) return;
-
-        if (isDelay) {
-            tls.delayTime = delayTime;
+        if (commandName.equals(OP_NOP)) {
+            return;
         }
+        else if (commandName.equals(OP_DELAY)) {
+            tls.delayTime = delayTime;
+            return;
+        }
+        else if (commandName.equals(OP_JUMP)) {
+            tls.push(tls.commandIndex);
+            tls.commandIndex = jumpLocation;
+            return;
+        }
+        else if (commandName.equals(OP_RET)) {
+            tls.commandIndex = tls.pop();
+            return;
+        }
+        // SET, CLEAR
         else {
             for (int i = lightStart; i < lightEnd; i+=lightStep) {
                 tlm.getTrackLightAt(i).setLight(0, color);

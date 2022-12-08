@@ -2,7 +2,8 @@
 
 public class TrackLightSequence {	
 	
-    private static final int MAX_SUBROUTINES = 64;
+    private static final int MAX_SUBROUTINES = 1024;
+    private static final int MAX_STACK_SIZE = 1024;
 
     public float delayTime = 0;
     private TrackLightManager tlm;
@@ -14,8 +15,12 @@ public class TrackLightSequence {
     private int[] subroutineIndexList;
     private int subroutineCount;
 
+    private int[] stack;
+    private int stackTop = 0;
+
     // Current State
-    private int commandIndex = 0;
+    public int commandIndex = 0;
+    public int startIndex = 0;
     private TrackLightCommand currentCommand;
 
     public TrackLightSequence(TrackLightManager trackLightManager, String c) {
@@ -24,8 +29,22 @@ public class TrackLightSequence {
         commands = split(c, '\n');
 
         subroutineNameList = new String[MAX_SUBROUTINES];
-        subroutineIndexList = new String[MAX_SUBROUTINES]
+        subroutineIndexList = new int[MAX_SUBROUTINES];
 
+        stack = new int[MAX_STACK_SIZE];
+
+        compile();
+
+    }
+
+    public void push(int i) {
+        stack[stackTop] = i;
+        stackTop++;
+    }
+
+    public int pop() {
+        stackTop--;
+        return stack[stackTop];
     }
 
     public String[] split(String s, char splitChar) {
@@ -55,21 +74,24 @@ public class TrackLightSequence {
 
     }
 
-    public void compile() {
+    public bool compile() {
 
         for (int i = 0; i < commands.length; i++) {
 
-            String[] arguments = split(command[i], ' ');
+            String[] arguments = split(commands[i], ' ');
 
-            if (arguments[0].equals("SUB")) {
+            if (arguments[0].equals(TrackLightCommand.OP_SUB)) {
 
                 if (!registerSubroutine(arguments[1], i)) {
-
+                    return false;
                 }
 
             }
 
         }
+
+        compileLog("Success!");
+        return true;
 
     }
 
@@ -85,14 +107,14 @@ public class TrackLightSequence {
             
             commandIndex++;
             if (commandIndex >= commands.length) {
-                commandIndex = 0;
+                commandIndex = startIndex;
             }
 
         }
 
     }
 
-    private int getSubroutineIndex(String name) {
+    public int getSubroutineIndex(String name) {
 
         for (int i = 0; i < subroutineCount; i++) {
             if (subroutineNameList[i].equals(name)) return subroutineIndexList[i];
@@ -103,19 +125,33 @@ public class TrackLightSequence {
 
     private bool registerSubroutine(String name, int index) {
 
+        System.out.println("REGISTERING SUBROUTINE " + name);
+
         if (getSubroutineIndex(name) != -1) {
-            compileFailed("DUPILCATE SUBROUTINE NAME \"" + name + "\"");
+            compileLogError("DUPILCATE SUBROUTINE NAME \"" + name + "\"");
             return false;
+        }
+
+        if (name.equals(TrackLightCommand.KW_MAIN)) {
+            System.out.println("MAIN AT " + index);
+            commandIndex = index;
+            startIndex = index;
         }
 
         subroutineIndexList[subroutineCount] = index;
         subroutineNameList[subroutineCount] = name;
         subroutineCount++;
 
+        return true;
+
     }
 
-    private void compileFailed(String message) {
-        System.err.println("LIGHT COMPILATION ERROR. REASON: \"" + name + "\"");
+    private void compileLogError(String message) {
+        System.err.println("LIGHT COMPILATION: ERROR! REASON: \"" + message + "\"");
+    }
+
+    private void compileLog(String message) {
+        System.out.println("LIGHT COMPILATION: \"" + message + "\"");
     }
 
 }

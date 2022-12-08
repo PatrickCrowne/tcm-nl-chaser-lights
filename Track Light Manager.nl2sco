@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <root>
   <sceneobject>
-    <model path="triple_light.dae"/>
+    <model path="Demo/triple_light.dae"/>
     <script>
-      <classpath></classpath>
+      <classpath>Scripts</classpath>
       <class>TrackLightManager</class>
       <sharedvm>true</sharedvm>
     </script>
