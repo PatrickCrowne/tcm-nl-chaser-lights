@@ -2,6 +2,7 @@ import nlvm.math3d.*;
 
 public class TrackLightCommand {	
 	
+    // Operations
     public static final String OP_NOP = "NOP";
     public static final String OP_SET = "SET";
     public static final String OP_CLEAR = "CLEAR";
@@ -10,9 +11,11 @@ public class TrackLightCommand {
     public static final String OP_RET = "RETURN";
     public static final String OP_SUB = "DEF";
 
+    // Keywords
     public static final String KW_ALL = "ALL";
     public static final String KW_MAX = "MAX";
     public static final String KW_MAIN = "MAIN";
+    public static final String KW_RANDOM = "RANDOM";
 
     
     public String commandName;
@@ -42,8 +45,8 @@ public class TrackLightCommand {
 
     private bool processCommandString(String commandString) {
 
+        commandString = trim(commandString);
         System.out.println(commandString);
-
         String[] arguments = split(commandString, ' ');
 
         commandName = arguments[0];
@@ -103,26 +106,42 @@ public class TrackLightCommand {
         String[] lightRange = split(string, '-');
 
         if (lightRange.length == 1) {
+
             lightStart = parseInteger(lightRange[0]);
             lightEnd = lightStart;
             lightStep = 1;
+
         }
         else if (lightRange.length == 2){
-            lightStart = parseInteger(lightRange[0]);
-            lightEnd = parseInteger(lightRange[1]);
-            lightStep = 1;
+
+            // ALL-#
+            if (lightRange[0].equals(KW_ALL)) {
+                lightStart = 0;
+                lightEnd = parseInteger(KW_MAX);
+                lightStep = parseInteger(lightRange[1]);
+            }
+            // #-#
+            else {
+                lightStart = parseInteger(lightRange[0]);
+                lightEnd = parseInteger(lightRange[1]);
+                lightStep = 1;
+            }
+           
         }
         else {
+
+            //#-#-#
             lightStart = parseInteger(lightRange[0]);
             lightEnd = parseInteger(lightRange[1]);
             lightStep = parseInteger(lightRange[2]);
+
         }
 
     }
 
     private void parseColor(String arg0, String arg1, String arg2) {
 
-        color = new Vector3f( ((float)(Integer.parseInt(arg0)) / 255.0f), ((float)(Integer.parseInt(arg1)) / 255.0f), ((float)(Integer.parseInt(arg2)) / 255.0f));
+        color = new Vector3f( ((float)(parseInteger(arg0)) / 255.0f), ((float)(parseInteger(arg1)) / 255.0f), ((float)(parseInteger(arg2)) / 255.0f));
 
     }
 
@@ -130,7 +149,19 @@ public class TrackLightCommand {
         if (string.equals(KW_MAX)) {
             return tlm.trackLightCount;
         }
+        if (string.equals(KW_RANDOM)) {
+            return -1;
+        }
         return Integer.parseInt(string);
+    }
+
+    public String trim(String s) {
+
+        for (int i = 0; i < s.length(); i++) {
+            if (s.charAt(i) != ' ' && s.charAt(i) != '\t' ) return s.substring(i);
+        }
+        return s;
+
     }
 
     public String[] split(String s, char splitChar) {
@@ -180,9 +211,26 @@ public class TrackLightCommand {
         }
         // SET, CLEAR
         else {
-            for (int i = lightStart; i < lightEnd; i+=lightStep) {
-                tlm.getTrackLightAt(i).setLight(0, color);
+
+            if (lightStart < 0) lightStart = (int) ((float) Math.random() * (float) tlm.trackLightCount);
+            if (lightEnd < 0) lightEnd = (int) ((float) Math.random() * (float) tlm.trackLightCount);
+
+            if (color.x < 0) color.x = (float) Math.random();
+            if (color.y < 0) color.y = (float) Math.random();
+            if (color.z < 0) color.z = (float) Math.random();
+
+            if (lightStep < 0) {
+                for (int i = lightStart; i < lightEnd; i+=1) {
+                    if (Math.random() > 0.5)
+                        tlm.getTrackLightAt(i).setLight(0, color);
+                }
             }
+            else {
+                for (int i = lightStart; i < lightEnd; i+=lightStep) {
+                    tlm.getTrackLightAt(i).setLight(0, color);
+                }
+            }
+
         }
 
     }
